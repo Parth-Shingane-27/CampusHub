@@ -1,22 +1,21 @@
 {
   "name": "campushub",
   "version": "1.0.0",
-  "description": "CampusHub - College Event Management Platform with Node.js Server-Side Validation",
+  "description": "CampusHub - College Event Management Platform (Node.js, Express, MongoDB)",
   "main": "server/server.js",
   "scripts": {
     "start": "node server/server.js",
+    "dev": "node --watch server/server.js",
     "build": "npm --prefix client install && npm --prefix client run build",
-    "dev": "node server/server.js",
-    "server": "node --watch server/server.js",
     "client": "npm --prefix client run dev",
     "test": "node tests/mern_test_suite.js"
   },
   "keywords": [
     "campushub",
     "college-events",
-    "node-http",
-    "server-side-validation",
-    "vanilla-javascript"
+    "express",
+    "mongodb",
+    "google-sign-in"
   ],
   "author": "Sakshi Shewale",
   "license": "MIT",
@@ -25,10 +24,9 @@
     "connect-mongo": "^6.0.0",
     "cors": "^2.8.6",
     "dotenv": "^18.0.9",
-    "exceljs": "^4.4.0",
     "express": "^5.3.0",
     "express-session": "^1.19.0",
-    "mongodb": "^7.7.0",
+    "google-auth-library": "^11.3.2",
     "mongoose": "^9.11.4"
   }
 }

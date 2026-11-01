@@ -933,8 +933,16 @@ section {
 
 .feature-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 24px;
+}
+
+@media (max-width: 900px) {
+  .feature-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 560px) {
+  .feature-grid { grid-template-columns: 1fr; }
 }
 
 .feature-card {
@@ -1424,6 +1432,11 @@ section {
   border-radius: 999px;
   font-size: 0.8rem;
   font-weight: 600;
+}
+
+.event-card-body .badge-seats {
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .badge-seats.limited {

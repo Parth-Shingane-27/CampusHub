@@ -19,6 +19,11 @@ const adminLogoutBtn = document.getElementById("admin-logout-btn");
 // Tabs
 const tabBtnEvents = document.getElementById("tab-btn-events");
 const tabBtnRegistrations = document.getElementById("tab-btn-registrations");
+const tabBtnStudents = document.getElementById("tab-btn-students");
+const studentsTab = document.getElementById("students-tab");
+const studentsTableBody = document.getElementById("students-table-body");
+const adminStudentsSearch = document.getElementById("admin-students-search");
+const adminStudentsCountBadge = document.getElementById("admin-students-count-badge");
 const eventsTab = document.getElementById("events-tab");
 const registrationsTab = document.getElementById("registrations-tab");
 
@@ -116,21 +121,41 @@ async function loadAdminStats() {
 // 3. Tab Switching
 // --------------------------------------------------------
 function switchTab(tabName) {
-  if (tabName === "events") {
-    tabBtnEvents.classList.add("active");
-    tabBtnRegistrations.classList.remove("active");
-    eventsTab.style.display = "block";
-    registrationsTab.style.display = "none";
-  } else {
-    tabBtnRegistrations.classList.add("active");
-    tabBtnEvents.classList.remove("active");
-    eventsTab.style.display = "none";
-    registrationsTab.style.display = "block";
-  }
+  const tabs = {
+    events: [tabBtnEvents, eventsTab],
+    registrations: [tabBtnRegistrations, registrationsTab],
+    students: [tabBtnStudents, studentsTab]
+  };
+  Object.entries(tabs).forEach(([name, [btn, panel]]) => {
+    btn.classList.toggle("active", name === tabName);
+    panel.style.display = name === tabName ? "block" : "none";
+  });
+  if (tabName === "students") loadAdminStudents();
 }
 
 tabBtnEvents.addEventListener("click", () => switchTab("events"));
 tabBtnRegistrations.addEventListener("click", () => switchTab("registrations"));
+
+tabBtnStudents.addEventListener("click", () => switchTab("students"));
+
+// Clicking the "Registered Students" stat card opens the all-students tab
+const statCardStudents = document.getElementById("stat-card-students");
+if (statCardStudents) {
+  statCardStudents.addEventListener("click", () => {
+    switchTab("students");
+    studentsTab.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+}
+
+// Clicking the "Student Registrations" stat card opens the event-wise registrations tab
+const statCardRegistrations = document.getElementById("stat-card-registrations");
+if (statCardRegistrations) {
+  statCardRegistrations.addEventListener("click", () => {
+    switchTab("registrations");
+    const tabs = document.getElementById("registrations-tab");
+    if (tabs) tabs.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+}
 
 // --------------------------------------------------------
 // 4. Event Management (CRUD)
@@ -437,26 +462,25 @@ function renderRegistrationsTable(registrations) {
     return;
   }
 
-  let html = "";
+  // Group registrations event-wise (events in order of first appearance)
+  const groups = new Map();
   registrations.forEach(r => {
-    const isConfirmed = r.status === "Confirmed";
-    const statusClass = isConfirmed ? "confirmed" : "cancelled";
+    const key = r.eventId || r.eventTitle;
+    if (!groups.has(key)) groups.set(key, { title: r.eventTitle, items: [] });
+    groups.get(key).items.push(r);
+  });
 
+  let html = "";
+  groups.forEach(group => {
     html += `
-      <tr>
-        <td><strong>${escapeHtml(r.studentName)}</strong></td>
-        <td>${escapeHtml(r.studentEmail)}</td>
-        <td>${escapeHtml(r.collegeId || '-')} <br><span style="font-size: 0.78rem; color: var(--text-light);">${escapeHtml(r.yearOfStudy || '')}</span></td>
-        <td><strong style="color: var(--primary);">${escapeHtml(r.eventTitle)}</strong></td>
-        <td>${escapeHtml(r.registeredAt || 'Recent')}</td>
-        <td><span class="badge-status ${statusClass}">${escapeHtml(r.status || 'Confirmed')}</span></td>
-        <td>
-          <button type="button" class="btn-action btn-action-danger delete-reg-btn" data-id="${r.id}" data-name="${escapeHtml(r.studentName)}" data-title="${escapeHtml(r.eventTitle)}">
-            Remove
-          </button>
+      <tr style="background: #f1f5f9;">
+        <td colspan="7" style="padding: 12px 14px;">
+          <strong style="color: var(--primary); font-size: 1rem;">${escapeHtml(group.title)}</strong>
+          <span class="badge-seats" style="margin-left: 10px;">${group.items.length} registration${group.items.length === 1 ? "" : "s"}</span>
         </td>
       </tr>
     `;
+    group.items.forEach(r => { html += registrationRowHtml(r); });
   });
 
   registrationsTableBody.innerHTML = html;
@@ -464,6 +488,27 @@ function renderRegistrationsTable(registrations) {
   registrationsTableBody.querySelectorAll(".delete-reg-btn").forEach(btn => {
     btn.addEventListener("click", () => handleDeleteRegistration(btn.dataset.id, btn.dataset.name, btn.dataset.title));
   });
+}
+
+function registrationRowHtml(r) {
+  const isConfirmed = r.status === "Confirmed";
+  const statusClass = isConfirmed ? "confirmed" : "cancelled";
+
+  return `
+    <tr>
+      <td><strong>${escapeHtml(r.studentName)}</strong></td>
+      <td>${escapeHtml(r.studentEmail)}</td>
+      <td>${escapeHtml(r.collegeId || '-')} <br><span style="font-size: 0.78rem; color: var(--text-light);">${escapeHtml(r.yearOfStudy || '')}</span></td>
+      <td><strong style="color: var(--primary);">${escapeHtml(r.eventTitle)}</strong></td>
+      <td>${escapeHtml(r.registeredAt || 'Recent')}</td>
+      <td><span class="badge-status ${statusClass}">${escapeHtml(r.status || 'Confirmed')}</span></td>
+      <td>
+        <button type="button" class="btn-action btn-action-danger delete-reg-btn" data-id="${r.id}" data-name="${escapeHtml(r.studentName)}" data-title="${escapeHtml(r.eventTitle)}">
+          Remove
+        </button>
+      </td>
+    </tr>
+  `;
 }
 
 async function handleDeleteRegistration(regId, studentName, eventTitle) {
@@ -528,3 +573,133 @@ function escapeHtml(str) {
 
 // Initialize on page load
 document.addEventListener("DOMContentLoaded", initAdminDashboard);
+
+// --------------------------------------------------------
+// Registered Students (all student accounts)
+// --------------------------------------------------------
+let cachedStudents = [];
+
+async function loadAdminStudents() {
+  try {
+    const res = await fetch("/api/admin/students");
+    if (!res.ok) return;
+    const data = await res.json();
+    cachedStudents = data.students || [];
+    renderStudentsTable();
+  } catch (error) {
+    console.error("Error loading students:", error);
+    studentsTableBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: #ef4444;">Error loading students.</td></tr>`;
+  }
+}
+
+function renderStudentsTable() {
+  const q = adminStudentsSearch ? adminStudentsSearch.value.trim().toLowerCase() : "";
+  const list = cachedStudents.filter(s =>
+    !q || [s.name, s.email, s.collegeId].some(v => (v || "").toLowerCase().includes(q))
+  );
+
+  if (adminStudentsCountBadge) {
+    adminStudentsCountBadge.textContent = `${list.length} student${list.length === 1 ? "" : "s"}`;
+  }
+
+  if (list.length === 0) {
+    studentsTableBody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 24px;">No students found.</td></tr>`;
+    return;
+  }
+
+  studentsTableBody.innerHTML = list.map((s, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td><strong>${escapeHtml(s.name)}</strong></td>
+      <td>${escapeHtml(s.email)}</td>
+      <td>${escapeHtml(s.collegeId || "-")}</td>
+      <td>${escapeHtml(s.yearOfStudy || "-")}</td>
+      <td>${escapeHtml(s.joinedAt || "-")}</td>
+      <td>${s.eventsRegistered}</td>
+      <td>
+        <button type="button" class="btn-action btn-action-edit edit-student-btn" data-id="${s.id}">Edit</button>
+        <button type="button" class="btn-action btn-action-danger delete-student-btn" data-id="${s.id}">Delete</button>
+      </td>
+    </tr>
+  `).join("");
+
+  studentsTableBody.querySelectorAll(".edit-student-btn").forEach(btn =>
+    btn.addEventListener("click", () => openStudentModal(btn.dataset.id)));
+  studentsTableBody.querySelectorAll(".delete-student-btn").forEach(btn =>
+    btn.addEventListener("click", () => deleteStudent(btn.dataset.id)));
+}
+
+// ---- Edit / delete a student ----
+const studentModal = document.getElementById("student-form-modal");
+const studentForm = document.getElementById("student-form");
+const studentFormMessage = document.getElementById("student-form-message");
+
+function openStudentModal(id) {
+  const s = cachedStudents.find(x => x.id === id);
+  if (!s) return;
+  document.getElementById("student-form-id").value = s.id;
+  document.getElementById("student-form-email").value = s.email;
+  document.getElementById("student-form-name").value = s.name;
+  document.getElementById("student-form-college-id").value = s.collegeId === "Not provided" ? "" : s.collegeId;
+  document.getElementById("student-form-year").value = s.yearOfStudy || "3rd Year";
+  studentFormMessage.textContent = "";
+  studentModal.style.display = "flex";
+}
+
+function closeStudentModal() {
+  studentModal.style.display = "none";
+}
+
+["student-form-close", "student-form-cancel", "student-form-overlay"].forEach(id =>
+  document.getElementById(id).addEventListener("click", closeStudentModal));
+
+studentForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const id = document.getElementById("student-form-id").value;
+  try {
+    const res = await fetch(`/api/admin/students/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: document.getElementById("student-form-name").value,
+        collegeId: document.getElementById("student-form-college-id").value,
+        yearOfStudy: document.getElementById("student-form-year").value
+      })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      closeStudentModal();
+      if (typeof showToast === "function") showToast(data.message, "success");
+      await loadAdminStudents();
+    } else {
+      studentFormMessage.textContent = data.message || "Could not update student.";
+      studentFormMessage.className = "form-message error";
+    }
+  } catch (err) {
+    studentFormMessage.textContent = "Unable to connect to the server.";
+    studentFormMessage.className = "form-message error";
+  }
+});
+
+async function deleteStudent(id) {
+  const s = cachedStudents.find(x => x.id === id);
+  if (!s) return;
+  if (!confirm(`Delete student "${s.name}" (${s.email})? Their ${s.eventsRegistered} event registration(s) will also be removed. This cannot be undone.`)) return;
+
+  try {
+    const res = await fetch(`/api/admin/students/${id}`, { method: "DELETE" });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      if (typeof showToast === "function") showToast(data.message, "success");
+      await loadAdminStudents();
+      await loadAdminStats();
+      await loadAdminEvents();
+    } else {
+      alert(data.message || "Could not delete student.");
+    }
+  } catch (err) {
+    alert("Unable to connect to the server.");
+  }
+}
+
+if (adminStudentsSearch) adminStudentsSearch.addEventListener("input", renderStudentsTable);

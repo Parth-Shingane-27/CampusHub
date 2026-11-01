@@ -8,6 +8,7 @@ const express = require('express');
 const Registration = require('../models/Registration');
 const Event = require('../models/Event');
 const { requireStudent } = require('../middleware/authMiddleware');
+const { hasEventStarted } = require('../utils/eventTime');
 
 const router = express.Router();
 
@@ -37,6 +38,14 @@ router.post('/', requireStudent, async (req, res) => {
       return res.status(400).json({
         success: false,
         message: `Registration is currently closed for this event (${event.status}).`
+      });
+    }
+
+    // Events whose date/time has already passed cannot be registered for
+    if (hasEventStarted(event)) {
+      return res.status(400).json({
+        success: false,
+        message: 'This event has already started or finished. Registration is closed.'
       });
     }
 

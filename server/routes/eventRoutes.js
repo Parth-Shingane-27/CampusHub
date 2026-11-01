@@ -5,6 +5,7 @@
 // ========================================================
 
 const express = require('express');
+const { effectiveStatus } = require('../utils/eventTime');
 const Event = require('../models/Event');
 const Registration = require('../models/Registration');
 
@@ -64,7 +65,7 @@ router.get('/', async (req, res) => {
           capacity: evt.capacity,
           registeredCount: confirmedCount,
           availableSeats: available,
-          status: evt.status,
+          status: effectiveStatus(evt),
           image: evt.image,
           createdAt: evt.createdAt
         };
@@ -116,7 +117,7 @@ router.get('/:id', async (req, res) => {
       capacity: event.capacity,
       registeredCount: confirmedCount,
       availableSeats: Math.max(0, event.capacity - confirmedCount),
-      status: event.status,
+      status: effectiveStatus(event),
       image: event.image
     };
 

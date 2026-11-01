@@ -46,6 +46,95 @@ router.get('/stats', async (req, res) => {
 });
 
 // --------------------------------------------------------
+// GET /api/admin/students — All registered student accounts
+// --------------------------------------------------------
+router.get('/students', async (req, res) => {
+  try {
+    const students = await User.find({ role: 'student' }).sort({ createdAt: -1 });
+    const counts = await Registration.aggregate([
+      { $match: { status: 'Confirmed' } },
+      { $group: { _id: '$student', count: { $sum: 1 } } }
+    ]);
+    const countMap = new Map(counts.map(c => [String(c._id), c.count]));
+
+    return res.status(200).json({
+      success: true,
+      count: students.length,
+      students: students.map(u => ({
+        id: u._id.toString(),
+        name: u.name,
+        email: u.email,
+        collegeId: u.collegeId,
+        yearOfStudy: u.yearOfStudy,
+        joinedAt: u.createdAt ? u.createdAt.toISOString().slice(0, 10) : '',
+        eventsRegistered: countMap.get(u._id.toString()) || 0
+      }))
+    });
+  } catch (error) {
+    console.error('Error fetching students:', error);
+    return res.status(500).json({ success: false, message: 'Server error loading students.' });
+  }
+});
+
+// --------------------------------------------------------
+// PUT /api/admin/students/:id — Edit a student's profile
+// --------------------------------------------------------
+router.put('/students/:id', async (req, res) => {
+  try {
+    const student = await User.findOne({ _id: req.params.id, role: 'student' });
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Student not found.' });
+    }
+
+    const { name, collegeId, yearOfStudy } = req.body;
+    const validYears = ['1st Year', '2nd Year', '3rd Year', '4th Year', 'Post-Graduate'];
+
+    if (!name || name.trim().length < 2) {
+      return res.status(400).json({ success: false, message: 'Name must contain at least 2 characters.' });
+    }
+    if (!collegeId || collegeId.trim().length < 2) {
+      return res.status(400).json({ success: false, message: 'Please enter a valid College ID.' });
+    }
+    if (!validYears.includes(yearOfStudy)) {
+      return res.status(400).json({ success: false, message: 'Please select a valid year of study.' });
+    }
+
+    student.name = name.trim();
+    student.collegeId = collegeId.trim();
+    student.yearOfStudy = yearOfStudy;
+    await student.save();
+
+    return res.status(200).json({ success: true, message: `${student.name} updated.` });
+  } catch (error) {
+    console.error('Error updating student:', error);
+    return res.status(500).json({ success: false, message: 'Server error updating student.' });
+  }
+});
+
+// --------------------------------------------------------
+// DELETE /api/admin/students/:id — Remove a student and their registrations
+// --------------------------------------------------------
+router.delete('/students/:id', async (req, res) => {
+  try {
+    const student = await User.findOne({ _id: req.params.id, role: 'student' });
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Student not found.' });
+    }
+
+    await Registration.deleteMany({ student: student._id });
+    await User.findByIdAndDelete(student._id);
+
+    return res.status(200).json({
+      success: true,
+      message: `${student.name} and their registrations were removed.`
+    });
+  } catch (error) {
+    console.error('Error deleting student:', error);
+    return res.status(500).json({ success: false, message: 'Server error deleting student.' });
+  }
+});
+
+// --------------------------------------------------------
 // 2. GET /api/admin/registrations — View & filter all registrations
 // --------------------------------------------------------
 router.get('/registrations', async (req, res) => {

@@ -38,7 +38,7 @@ export default function Register({ onLoginSuccess, onShowToast }) {
 
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email.trim() || !emailPattern.test(email.trim())) {
-      setMessage({ text: 'Please enter a valid email address.', type: 'error' });
+      setMessage({ text: 'Please use your @mitaoe.ac.in email address.', type: 'error' });
       return;
     }
 
@@ -126,7 +126,7 @@ export default function Register({ onLoginSuccess, onShowToast }) {
               <input
                 type="email"
                 id="email"
-                placeholder="you@college.edu"
+                placeholder="you@mitaoe.ac.in"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required

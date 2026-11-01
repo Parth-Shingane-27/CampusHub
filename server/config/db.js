@@ -9,6 +9,7 @@ const bcrypt = require('bcryptjs');
 
 const User = require('../models/User');
 const Event = require('../models/Event');
+const Registration = require('../models/Registration');
 
 // Default campus events matching the original CampusHub design
 const DEFAULT_EVENTS = [
@@ -106,7 +107,7 @@ const DEFAULT_EVENTS = [
 async function seedInitialData() {
   try {
     // 1. Ensure Administrator Account Exists
-    const adminEmail = (process.env.ADMIN_EMAIL || 'admin@campushub.edu').toLowerCase().trim();
+    const adminEmail = (process.env.ADMIN_EMAIL || 'admin@mitaoe.ac.in').toLowerCase().trim();
     const adminPassword = process.env.ADMIN_PASSWORD || 'Admin@12345';
     const adminName = process.env.ADMIN_NAME || 'Campus Administrator';
 
@@ -125,7 +126,7 @@ async function seedInitialData() {
     }
 
     // 2. Ensure Demo Student Account Exists for effortless faculty evaluation
-    const demoStudentEmail = 'sakshi@campushub.edu';
+    const demoStudentEmail = 'sakshi@mitaoe.ac.in';
     const existingStudent = await User.findOne({ email: demoStudentEmail });
     if (!existingStudent) {
       const studentHash = await bcrypt.hash('Student@123', 10);
@@ -166,6 +167,16 @@ async function connectDB() {
     console.log('[MongoDB] Connecting to database...');
     await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 });
     console.log('[MongoDB] Connected successfully to database.');
+
+    // Drop indexes left over from older schemas (e.g. a unique userId+eventId index
+    // that made every new registration fail) and create the ones the models declare
+    for (const Model of [User, Event, Registration]) {
+      try {
+        await Model.syncIndexes();
+      } catch (indexError) {
+        console.warn(`[MongoDB] Could not sync indexes for ${Model.modelName}:`, indexError.message);
+      }
+    }
 
     // Seed data on startup
     await seedInitialData();

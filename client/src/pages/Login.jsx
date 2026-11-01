@@ -12,18 +12,6 @@ export default function Login({ onLoginSuccess, onShowToast }) {
   const [message, setMessage] = useState({ text: '', type: '' });
   const [submitting, setSubmitting] = useState(false);
 
-  // Quick Demo Autofills for Faculty Demonstration
-  const handleFillStudent = () => {
-    setEmail('sakshi@campushub.edu');
-    setPassword('Student@123');
-    setMessage({ text: 'Student demo credentials filled. Click Login to sign in.', type: 'success' });
-  };
-
-  const handleFillAdmin = () => {
-    setEmail('admin@campushub.edu');
-    setPassword('Admin@12345');
-    setMessage({ text: 'Admin demo credentials filled. Click Login to sign in.', type: 'success' });
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -35,7 +23,7 @@ export default function Login({ onLoginSuccess, onShowToast }) {
 
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailPattern.test(email.trim())) {
-      setMessage({ text: 'Please enter a valid email address (e.g. you@college.edu).', type: 'error' });
+      setMessage({ text: 'Please use your @mitaoe.ac.in email address.', type: 'error' });
       return;
     }
 
@@ -87,7 +75,7 @@ export default function Login({ onLoginSuccess, onShowToast }) {
               <input
                 type="email"
                 id="email"
-                placeholder="you@college.edu"
+                placeholder="you@mitaoe.ac.in"
                 value={email}
                 onChange={(e) => {
                   setEmail(e.target.value);
@@ -132,20 +120,6 @@ export default function Login({ onLoginSuccess, onShowToast }) {
               </p>
             )}
 
-            {/* Quick Demo Credentials Fill (For Faculty Demonstration) */}
-            <div style={{ marginTop: '18px', padding: '12px', background: '#f8fafc', borderRadius: '8px', border: '1px dashed var(--border-color)', fontSize: '0.85rem' }}>
-              <p style={{ fontWeight: '700', color: 'var(--text-main)', marginBottom: '8px', textAlign: 'center' }}>
-                ⚡ Quick Demo Login (Click to Fill):
-              </p>
-              <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                <button type="button" className="btn-action btn-action-edit" onClick={handleFillStudent} title="Fill Sakshi Shewale Demo Account">
-                  Student Demo
-                </button>
-                <button type="button" className="btn-action btn-action-edit" onClick={handleFillAdmin} style={{ background: '#fef3c7', color: '#b45309' }} title="Fill Admin Demo Account">
-                  Admin Demo
-                </button>
-              </div>
-            </div>
           </form>
 
           <div className="auth-divider">New to CampusHub</div>

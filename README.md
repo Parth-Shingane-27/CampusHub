@@ -6,15 +6,13 @@ CampusHub is a web application that helps college students explore campus events
 
 ## ✨ Features
 
-- **Student Registration and Login** – Students can create accounts and log in.
-- **Browse Events** – View upcoming college events.
-- **Search and Filter** – Find events by name or category.
-- **Event Registration** – Register for events online.
-- **Student Dashboard** – View registered events and manage bookings.
-- **Admin Dashboard** – Create, update, and delete events.
-- **Manage Registrations** – Admins can view event registrations.
-- **Protected Routes** – Separate access for students and admins.
-- **Responsive Design** – Use the application on different screen sizes.
+- **Google Sign-In** – Students sign in with their college Google account (`@mitaoe.ac.in` only); an account is created on first login.
+- **Browse Events** – View upcoming college events, with search and category filters.
+- **Event Registration** – Register online; registration closes automatically once an event's date and time have passed.
+- **Student Dashboard** – View registrations, cancel bookings and edit the profile.
+- **Admin Dashboard** – Create, edit and delete events; view event-wise registrations; view, edit and delete students.
+- **Role-based Access** – Separate student and admin permissions enforced on the server.
+- **Responsive Design** – Works on different screen sizes.
 
 ## 🛠️ Technologies Used
 
@@ -33,29 +31,22 @@ CampusHub is a web application that helps college students explore campus events
 
 ```text
 CampusHub/
-├── client/                 # React frontend
-│   ├── public/
-│   ├── src/
-│   │   ├── components/     # Reusable components
-│   │   ├── pages/          # Application pages
-│   │   ├── services/       # API communication
-│   │   ├── styles/         # CSS styles
-│   │   ├── App.jsx
-│   │   └── main.jsx
-│   └── package.json
-│
+├── public/                 # Static frontend served by the Express server
+│   ├── *.html              # index, events, about, login, student/admin dashboards
+│   ├── css/                # Stylesheet
+│   ├── js/                 # Page scripts
+│   └── images/
 ├── server/                 # Node.js and Express backend
-│   ├── config/             # Database connection
-│   ├── models/             # MongoDB data models
-│   ├── routes/             # API routes
-│   ├── middleware/         # Authentication checks
+│   ├── config/             # Database connection and seeding
+│   ├── models/             # Mongoose models (User, Event, Registration)
+│   ├── routes/             # auth, events, registrations, admin
+│   ├── middleware/         # Authentication / role checks
+│   ├── utils/              # Helpers (event timing)
 │   └── server.js
-│
-├── tests/                  # Automated tests
-├── .env.example            # Example environment variables
-├── .gitignore
-├── package.json
-└── README.md
+├── client/                 # Optional React (Vite) frontend; served instead of public/ once built
+├── tests/                  # Automated tests (npm test)
+├── .env.example            # Environment variable template
+└── package.json
 ```
 
 ## ⚙️ How to Run the Project
@@ -106,40 +97,28 @@ cd ..
 
 ### 4. Configure Environment Variables
 
-Create a `.env` file in the location expected by your backend configuration.
-
-For example:
+Copy `.env.example` to `.env` in the project root and fill it in:
 
 ```env
-PORT=5000
-MONGO_URI=your_mongodb_connection_string
+PORT=3000
+MONGODB_URI=mongodb://127.0.0.1:27017/campushub
+SESSION_SECRET=a_long_random_string
+ALLOWED_EMAIL_DOMAIN=mitaoe.ac.in
+GOOGLE_CLIENT_ID=your_google_oauth_client_id
+ADMIN_EMAIL=admin@mitaoe.ac.in
+ADMIN_PASSWORD=change_me
 ```
 
-Replace the example database value with your own MongoDB connection string. Never upload your real `.env` file or database password to GitHub.
+For Google Sign-In, create an OAuth client ID (type "Web application") in Google Cloud Console and add `http://localhost:3000` under "Authorized JavaScript origins". Never commit your real `.env` file.
 
 ### 5. Start the Application
 
-Run the frontend and backend using the scripts configured in your project's `package.json` files.
-
-For example, if the root scripts support these commands, open separate terminals and run:
-
-**Backend:**
-
 ```bash
-cd server
-npm run dev
+npm start        # http://localhost:3000 (frontend + API)
+npm test         # run the test suite
 ```
 
-**Frontend:**
-
-```bash
-cd client
-npm run dev
-```
-
-Open the local URL shown by Vite in your terminal, usually `http://localhost:5173`.
-
-*Note: The exact commands and ports depend on your project's configuration.*
+MongoDB must be running. Students sign in with Google; the admin uses the "Admin login" link on the login page.
 
 ## 🗄️ Database
 
@@ -157,10 +136,10 @@ Mongoose is used to interact with the database.
 
 CampusHub supports separate student and admin roles.
 
-- Students can browse events and manage their registrations.
-- Admins can manage events and view registrations.
-- Protected backend routes check whether the user has permission to perform an action.
-- Passwords should be securely hashed before being stored.
+- Students sign in with Google (college domain only) and can browse events and manage their registrations.
+- Admins can manage events, registrations and students.
+- Protected backend routes check the user's role before every action.
+- Admin passwords are stored as bcrypt hashes.
 
 ## 🚀 Deployment
 

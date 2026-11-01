@@ -33,25 +33,6 @@ function showLoginMessage(message, type) {
 });
 
 // Demo Credentials Auto-Fill
-const fillStudentBtn = document.getElementById("fill-student-btn");
-const fillAdminBtn = document.getElementById("fill-admin-btn");
-
-if (fillStudentBtn) {
-  fillStudentBtn.addEventListener("click", () => {
-    emailInput.value = "sakshi@campushub.edu";
-    passwordInput.value = "Student@123";
-    showLoginMessage("Student demo credentials filled. Click Login to sign in.", "success");
-  });
-}
-
-if (fillAdminBtn) {
-  fillAdminBtn.addEventListener("click", () => {
-    emailInput.value = "admin@campushub.edu";
-    passwordInput.value = "Admin@12345";
-    showLoginMessage("Admin demo credentials filled. Click Login to sign in.", "success");
-  });
-}
-
 // Form Submission Event
 loginForm.addEventListener("submit", async function (event) {
   event.preventDefault();
@@ -69,7 +50,7 @@ loginForm.addEventListener("submit", async function (event) {
     return;
   }
   if (!emailPattern.test(email)) {
-    showLoginMessage("Please enter a valid email address (e.g. you@college.edu).", "error");
+    showLoginMessage("Please use your @mitaoe.ac.in email address.", "error");
     emailInput.focus();
     return;
   }
@@ -130,3 +111,64 @@ loginForm.addEventListener("submit", async function (event) {
     showLoginMessage("Unable to connect to the server. Please ensure the server is running.", "error");
   }
 });
+
+
+// ---------------------------------------------------------
+// Google Sign-In (restricted to the college domain by the server)
+// ---------------------------------------------------------
+function redirectAfterLogin(user) {
+  const redirectUrl = new URLSearchParams(window.location.search).get("redirect");
+  if (user && user.role === "admin") window.location.href = "admin-dashboard.html";
+  else if (redirectUrl) window.location.href = redirectUrl;
+  else window.location.href = "student-dashboard.html";
+}
+
+async function handleGoogleCredential(response) {
+  try {
+    const res = await fetch("/api/auth/google", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ credential: response.credential })
+    });
+    const result = await res.json();
+    if (res.ok && result.success) {
+      showLoginMessage(result.message || "Login successful! Redirecting...", "success");
+      setTimeout(() => redirectAfterLogin(result.user), 700);
+    } else {
+      showLoginMessage(result.message || "Google sign-in failed.", "error");
+    }
+  } catch (error) {
+    showLoginMessage("Unable to connect to the server. Please ensure the server is running.", "error");
+  }
+}
+
+async function initGoogleSignIn() {
+  const holder = document.getElementById("google-signin");
+  if (!holder) return;
+  try {
+    const cfg = await (await fetch("/api/auth/config")).json();
+    if (!cfg.googleClientId) { holder.style.display = "none"; return; }
+    const start = () => {
+      if (!window.google || !google.accounts) return setTimeout(start, 200);
+      google.accounts.id.initialize({
+        client_id: cfg.googleClientId,
+        callback: handleGoogleCredential,
+        hd: cfg.allowedEmailDomain
+      });
+      google.accounts.id.renderButton(holder, { theme: "outline", size: "large", text: "signin_with", width: 300 });
+    };
+    start();
+  } catch (e) {
+    holder.style.display = "none";
+  }
+}
+initGoogleSignIn();
+
+// Reveal the admin-only password form
+const adminToggle = document.getElementById("admin-toggle");
+if (adminToggle) {
+  adminToggle.addEventListener("click", (e) => {
+    e.preventDefault();
+    loginForm.style.display = loginForm.style.display === "none" ? "block" : "none";
+  });
+}

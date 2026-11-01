@@ -24,25 +24,19 @@ const adminRoutes = require('./routes/adminRoutes');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const CLIENT_DIST = path.join(__dirname, '../client/dist');
-const PUBLIC_DIR = path.join(__dirname, '..');
+const PUBLIC_DIR = path.join(__dirname, '../public');
 
-// 1. CORS Configuration for Development & Production
+// 1. CORS: the frontend is served from this server (same origin). Cross-origin
+// access is limited to the Vite dev server plus any origins in CLIENT_ORIGIN.
 const allowedOrigins = [
   'http://localhost:5173',
-  'http://localhost:3000',
   'http://127.0.0.1:5173',
-  'http://127.0.0.1:3000'
+  ...(process.env.CLIENT_ORIGIN || '').split(',').map(o => o.trim()).filter(Boolean)
 ];
 
 app.use(
   cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(null, true); // Allow dynamic host in cloud deployment
-      }
-    },
+    origin: (origin, callback) => callback(null, !origin || allowedOrigins.includes(origin)),
     credentials: true
   })
 );
@@ -52,7 +46,11 @@ app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // 3. Configure Server-Side Sessions with MongoDB Store
-const sessionSecret = process.env.SESSION_SECRET || 'campushub_mern_secret_2026';
+if (!process.env.SESSION_SECRET && process.env.NODE_ENV === 'production') {
+  console.error('SESSION_SECRET must be set in production.');
+  process.exit(1);
+}
+const sessionSecret = process.env.SESSION_SECRET || 'campushub_dev_only_secret';
 
 const sessionOptions = {
   name: 'campushub.sid',
@@ -127,7 +125,7 @@ if (fs.existsSync(CLIENT_DIST)) {
     next();
   });
 } else {
-  // Development fallback: serve static files from root if client build does not exist yet
+  // Development fallback: serve the static frontend from public/ if the React build does not exist
   app.use(express.static(PUBLIC_DIR));
 }
 

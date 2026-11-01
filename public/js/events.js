@@ -63,7 +63,8 @@ function renderEventCards(eventsToRender) {
 
     // Determine seat badge status
     let seatBadgeClass = "badge-seats";
-    if (isFull) seatBadgeClass += " full";
+    if (isClosed) seatBadgeClass += " full";
+    else if (isFull) seatBadgeClass += " full";
     else if (availableSeats <= 10) seatBadgeClass += " limited";
 
     // Determine action button state
@@ -78,13 +79,13 @@ function renderEventCards(eventsToRender) {
         <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 8px;">
           <h3>${escapeHtml(event.title)}</h3>
           <span class="${seatBadgeClass}" title="Capacity: ${event.capacity}">
-            ${isFull ? 'Full' : availableSeats + ' seats left'}
+            ${isClosed ? (event.status === 'Completed' ? 'Completed' : 'Closed') : (isFull ? 'Full' : availableSeats + ' seats left')}
           </span>
         </div>
         <div class="event-meta">
-          <span class="icon">≡ƒôà ${escapeHtml(event.date)}</span>
-          <span class="icon">ΓÅ░ ${escapeHtml(event.time || '10:00 AM')}</span>
-          <span class="icon">≡ƒôì ${escapeHtml(event.venue)}</span>
+          <span class="icon">\u{1F4C5} ${escapeHtml(event.date)}</span>
+          <span class="icon">\u23F0 ${escapeHtml(event.time || '10:00 AM')}</span>
+          <span class="icon">\u{1F4CD} ${escapeHtml(event.venue)}</span>
         </div>
         <p class="event-desc">${escapeHtml(event.description)}</p>
         <div style="display: flex; gap: 8px; margin-top: 14px;">
@@ -93,7 +94,7 @@ function renderEventCards(eventsToRender) {
           </button>
           ${isRegistered ? `
             <span class="badge-status confirmed" style="display: flex; align-items: center; justify-content: center; padding: 0 12px; white-space: nowrap;">
-              Γ£ô Registered
+              \u2713 Registered
             </span>
           ` : ''}
         </div>
@@ -181,11 +182,11 @@ function openEventModal(event) {
   modalCategory.textContent = event.category;
 
   modalMeta.innerHTML = `
-    <span class="icon">≡ƒôà ${escapeHtml(event.date)}</span>
-    <span class="icon">ΓÅ░ ${escapeHtml(event.time || '10:00 AM')}</span>
-    <span class="icon">≡ƒôì ${escapeHtml(event.venue)}</span>
-    <span class="icon">≡ƒæÑ Capacity: ${event.capacity} (${availableSeats} available)</span>
-    <span class="icon">≡ƒôî Status: <strong style="color: ${event.status === 'Upcoming' ? '#10b981' : '#f59e0b'}">${escapeHtml(event.status || 'Upcoming')}</strong></span>
+    <span class="icon">\u{1F4C5} ${escapeHtml(event.date)}</span>
+    <span class="icon">\u23F0 ${escapeHtml(event.time || '10:00 AM')}</span>
+    <span class="icon">\u{1F4CD} ${escapeHtml(event.venue)}</span>
+    <span class="icon">\u{1F465} Capacity: ${event.capacity} (${availableSeats} available)</span>
+    <span class="icon">\u{1F4CC} Status: <strong style="color: ${event.status === 'Upcoming' ? '#10b981' : '#f59e0b'}">${escapeHtml(event.status || 'Upcoming')}</strong></span>
   `;
 
   modalDesc.textContent = event.description;
@@ -207,7 +208,7 @@ function openEventModal(event) {
       modalRegisterBtn.href = "admin-dashboard.html";
     } else if (isRegistered) {
       // Already registered
-      modalRegisterBtn.textContent = "Γ£ô Already Registered";
+      modalRegisterBtn.textContent = "\u2713 Already Registered";
       modalRegisterBtn.disabled = true;
       modalRegisterBtn.className = "btn btn-secondary btn-small";
       modalRegisterBtn.href = "#";
@@ -276,7 +277,7 @@ async function handleEventRegistration(eventId) {
       }
 
       // Re-render modal button
-      modalRegisterBtn.textContent = "Γ£ô Already Registered";
+      modalRegisterBtn.textContent = "\u2713 Already Registered";
       modalRegisterBtn.disabled = true;
       modalRegisterBtn.className = "btn btn-secondary btn-small";
 

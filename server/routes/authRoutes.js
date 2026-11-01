@@ -6,11 +6,21 @@
 
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
+const { OAuth2Client } = require('google-auth-library');
 
 const User = require('../models/User');
 const { requireStudent } = require('../middleware/authMiddleware');
 
 const router = express.Router();
+
+// Only emails from this domain may register or log in (set ALLOWED_EMAIL_DOMAIN in .env)
+const ALLOWED_EMAIL_DOMAIN = (process.env.ALLOWED_EMAIL_DOMAIN || 'mitaoe.ac.in').toLowerCase().replace(/^@/, '');
+const DOMAIN_MESSAGE = `Only @${ALLOWED_EMAIL_DOMAIN} email addresses are allowed.`;
+const hasAllowedDomain = (email) => email.trim().toLowerCase().endsWith('@' + ALLOWED_EMAIL_DOMAIN);
+
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+const googleClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null;
 
 // Memory rate-limiting for failed login attempts
 const loginAttempts = new Map();
@@ -65,6 +75,8 @@ router.get('/me', (req, res) => {
 // 2. POST /api/auth/register — Public student registration
 // --------------------------------------------------------
 router.post('/register', async (req, res) => {
+  // Students sign up / log in only through Google (POST /api/auth/google)
+  return res.status(403).json({ success: false, message: 'Please sign in with your Google account.' });
   try {
     const { name, fullName, email, collegeId, yearOfStudy, password, confirmPassword } = req.body;
     const studentName = (name || fullName || '').trim();
@@ -83,6 +95,10 @@ router.post('/register', async (req, res) => {
         success: false,
         message: 'Please provide a valid email address.'
       });
+    }
+
+    if (!hasAllowedDomain(email)) {
+      return res.status(400).json({ success: false, message: DOMAIN_MESSAGE });
     }
 
     if (!collegeId || collegeId.trim().length < 2) {
@@ -177,6 +193,10 @@ router.post('/login', async (req, res) => {
       });
     }
 
+    if (!hasAllowedDomain(email)) {
+      return res.status(400).json({ success: false, message: DOMAIN_MESSAGE });
+    }
+
     const cleanEmail = email.trim().toLowerCase();
 
     // Check rate limit
@@ -189,6 +209,10 @@ router.post('/login', async (req, res) => {
     }
 
     const user = await User.findOne({ email: cleanEmail });
+    // Password login is for admins only; students must use Google sign-in
+    if (user && user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Students must sign in with Google.' });
+    }
     if (!user) {
       recordFailedLogin(cleanEmail);
       return res.status(401).json({
@@ -238,6 +262,86 @@ router.post('/login', async (req, res) => {
       success: false,
       message: 'Server error during login.'
     });
+  }
+});
+
+// --------------------------------------------------------
+// Google Sign-In: public client id for the frontend button
+// --------------------------------------------------------
+router.get('/config', (req, res) => {
+  res.json({
+    success: true,
+    googleClientId: GOOGLE_CLIENT_ID,
+    allowedEmailDomain: ALLOWED_EMAIL_DOMAIN
+  });
+});
+
+// --------------------------------------------------------
+// Google Sign-In: verify the Google ID token, then log in / create the user.
+// Only verified accounts on ALLOWED_EMAIL_DOMAIN are accepted.
+// --------------------------------------------------------
+router.post('/google', async (req, res) => {
+  try {
+    if (!googleClient) {
+      return res.status(503).json({ success: false, message: 'Google sign-in is not configured on the server.' });
+    }
+
+    const { credential } = req.body;
+    if (!credential) {
+      return res.status(400).json({ success: false, message: 'Missing Google credential.' });
+    }
+
+    let payload;
+    try {
+      const ticket = await googleClient.verifyIdToken({ idToken: credential, audience: GOOGLE_CLIENT_ID });
+      payload = ticket.getPayload();
+    } catch (e) {
+      return res.status(401).json({ success: false, message: 'Google sign-in could not be verified.' });
+    }
+
+    const email = (payload.email || '').toLowerCase();
+    if (!payload.email_verified || !hasAllowedDomain(email) || (payload.hd && payload.hd.toLowerCase() !== ALLOWED_EMAIL_DOMAIN)) {
+      return res.status(403).json({ success: false, message: DOMAIN_MESSAGE });
+    }
+
+    let user = await User.findOne({ email });
+    if (!user) {
+      // First Google login: create a student account with an unusable random password
+      user = await User.create({
+        name: (payload.name || email.split('@')[0]).trim().padEnd(2, ' '),
+        email,
+        collegeId: 'Not provided',
+        yearOfStudy: '3rd Year',
+        password: await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10),
+        role: 'student'
+      });
+    }
+
+    req.session.regenerate(err => {
+      if (err) {
+        console.error('Session regeneration error:', err);
+        return res.status(500).json({ success: false, message: 'Session error on login.' });
+      }
+
+      req.session.user = {
+        id: user._id.toString(),
+        name: user.name,
+        fullName: user.name,
+        email: user.email,
+        collegeId: user.collegeId,
+        yearOfStudy: user.yearOfStudy,
+        role: user.role
+      };
+
+      return res.status(200).json({
+        success: true,
+        message: `Welcome, ${user.name}!`,
+        user: req.session.user
+      });
+    });
+  } catch (error) {
+    console.error('Google login error:', error);
+    return res.status(500).json({ success: false, message: 'Server error during Google login.' });
   }
 });
 
