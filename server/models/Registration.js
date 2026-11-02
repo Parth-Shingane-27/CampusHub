@@ -34,16 +34,6 @@ const registrationSchema = new mongoose.Schema(
     },
     cancelledAt: {
       type: Date
-    },
-    // Secret code encoded in the ticket QR; scanned by an admin at the venue
-    ticketCode: {
-      type: String,
-      unique: true,
-      sparse: true,
-      default: () => require('crypto').randomBytes(12).toString('hex')
-    },
-    checkedInAt: {
-      type: Date
     }
   },
   {

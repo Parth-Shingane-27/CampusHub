@@ -13,8 +13,6 @@ const { requireAdmin } = require('../middleware/authMiddleware');
 const { broadcast } = require('../utils/liveUpdates');
 const { validObjectId } = require('../middleware/validate');
 
-const CHECKIN_CODE = /^[a-f0-9]{24}$/;
-
 const router = express.Router();
 
 // Apply requireAdmin to all routes in this file
@@ -230,63 +228,6 @@ router.delete('/registrations/:id', validObjectId(), async (req, res) => {
       success: false,
       message: 'Server error removing registration.'
     });
-  }
-});
-
-// --------------------------------------------------------
-// POST /api/admin/checkin — Mark a ticket as attended (QR scan)
-// --------------------------------------------------------
-router.post('/checkin', async (req, res) => {
-  try {
-    const code = String((req.body && req.body.code) || '').trim().toLowerCase();
-    if (!CHECKIN_CODE.test(code)) {
-      return res.status(400).json({ success: false, message: 'This is not a valid CampusHub ticket code.' });
-    }
-
-    const reg = await Registration.findOne({ ticketCode: code })
-      .populate('student', 'name collegeId email')
-      .populate('event', 'title');
-
-    if (!reg || !reg.event) {
-      return res.status(404).json({ success: false, message: 'Ticket not found.' });
-    }
-
-    const info = {
-      studentName: reg.student ? reg.student.name : 'Student',
-      collegeId: reg.student ? reg.student.collegeId : '',
-      eventTitle: reg.event.title
-    };
-
-    if (reg.status !== 'Confirmed') {
-      return res.status(400).json({ success: false, message: 'This registration was cancelled.', ...info });
-    }
-
-    // Atomic update so two scanners cannot both succeed for the same ticket
-    const updated = await Registration.findOneAndUpdate(
-      { _id: reg._id, checkedInAt: { $exists: false } },
-      { checkedInAt: new Date() },
-      { returnDocument: 'after' }
-    );
-
-    if (!updated) {
-      return res.status(409).json({
-        success: false,
-        message: 'Already checked in.',
-        checkedInAt: reg.checkedInAt,
-        ...info
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: `${info.studentName} checked in for "${info.eventTitle}".`,
-      ...info,
-      checkedInAt: updated.checkedInAt
-    });
-
-  } catch (error) {
-    console.error('Error during check-in:', error);
-    return res.status(500).json({ success: false, message: 'Server error during check-in.' });
   }
 });
 

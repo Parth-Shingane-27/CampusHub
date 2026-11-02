@@ -75,7 +75,6 @@ export const api = {
   getStudentStats: () => request('/student/stats'),
 
   // Admin Operations
-  checkInTicket: (code) => request('/admin/checkin', { method: 'POST', body: JSON.stringify({ code }) }),
   getAdminStats: () => request('/admin/stats'),
   getAdminRegistrations: (params = {}) => {
     const query = new URLSearchParams();

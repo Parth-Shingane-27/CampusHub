@@ -1602,7 +1602,7 @@ section {
   }
 }
 
-/* ---------- Time-status badges, calendar links, bookmarks, tickets ---------- */
+/* ---------- Time-status badges, calendar links, bookmarks ---------- */
 .badge-time {
   display: inline-block;
   padding: 3px 10px;
@@ -1654,11 +1654,3 @@ section {
 
 .pager { display: flex; justify-content: center; align-items: center; gap: 14px; margin: 32px 0; }
 .pager span { font-size: 0.9rem; color: var(--text-light); }
-
-.ticket-qr { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 8px 0; }
-.ticket-qr .ticket-code { font-family: monospace; font-size: 0.8rem; color: var(--text-light); word-break: break-all; text-align: center; }
-
-.scan-result { margin-top: 16px; padding: 14px 16px; border-radius: 8px; font-weight: 600; }
-.scan-result.ok { background: #d1fae5; color: #065f46; }
-.scan-result.warn { background: #fef3c7; color: #92400e; }
-.scan-result.bad { background: #fee2e2; color: #991b1b; }

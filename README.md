@@ -15,7 +15,6 @@ CampusHub is a web application that helps college students explore campus events
 - **Add to Calendar** – Google Calendar link or `.ics` download on every event and after registering.
 - **Live Status Badges** – "Starts in 2 days", "Closing soon", "Ongoing" or "Completed" on each event.
 - **Bookmarks** – Students can save events and see them on their dashboard.
-- **QR Tickets & Check-In** – Every registration gets a QR ticket; admins scan it (camera or manual code) at the venue to mark attendance.
 - **Live Seat Counts** – Seat availability updates in real time (Server-Sent Events) without refreshing.
 - **Pagination, Rate Limiting & Validation** – Events are paginated; the API is rate limited and validates input.
 - **Responsive Design** – Works on different screen sizes.

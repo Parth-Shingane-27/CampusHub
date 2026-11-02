@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { QRCodeSVG } from 'qrcode.react';
 import { api } from '../services/api';
 import { TimeBadge, CalendarLinks } from '../components/EventBadges';
 import { useLiveEvents, useMinuteTick } from '../utils/eventUtils';
@@ -23,7 +22,6 @@ export default function StudentDashboard({ user, onUpdateUser, onLogout, onShowT
   const [stats, setStats] = useState({ totalEvents: 0, myRegistrationsCount: 0 });
   const [loading, setLoading] = useState(true);
   const [savedEvents, setSavedEvents] = useState([]);
-  const [ticketReg, setTicketReg] = useState(null);
   const [, setTick] = useState(0);
 
   useMinuteTick(setTick);
@@ -245,7 +243,6 @@ export default function StudentDashboard({ user, onUpdateUser, onLogout, onShowT
                             </span>
                             <span className={`badge-status ${statusClass}`}>{reg.status}</span>
                             {isConfirmed && <TimeBadge event={regToEvent(reg)} />}
-                            {reg.checkedInAt && <span className="badge-status confirmed">✓ Attended</span>}
                           </div>
                           <h4 style={{ fontSize: '1.15rem', color: 'var(--dark)', marginBottom: '6px' }}>
                             {reg.eventTitle}
@@ -258,28 +255,15 @@ export default function StudentDashboard({ user, onUpdateUser, onLogout, onShowT
                           {isConfirmed && <CalendarLinks event={regToEvent(reg)} />}
                         </div>
 
-                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        <div>
                           {isConfirmed ? (
-                            <>
-                              {reg.ticketCode && (
-                                <button
-                                  type="button"
-                                  className="btn btn-primary btn-small"
-                                  onClick={() => setTicketReg(reg)}
-                                >
-                                  🎫 Show Ticket
-                                </button>
-                              )}
-                              {!reg.checkedInAt && (
-                                <button
-                                  type="button"
-                                  className="btn-action btn-action-danger"
-                                  onClick={() => handleCancel(reg.id || reg._id, reg.eventTitle)}
-                                >
-                                  Cancel Registration
-                                </button>
-                              )}
-                            </>
+                            <button
+                              type="button"
+                              className="btn-action btn-action-danger"
+                              onClick={() => handleCancel(reg.id || reg._id, reg.eventTitle)}
+                            >
+                              Cancel Registration
+                            </button>
                           ) : (
                             <span style={{ fontSize: '0.82rem', color: 'var(--text-light)', fontStyle: 'italic' }}>
                               Cancelled
@@ -453,35 +437,6 @@ export default function StudentDashboard({ user, onUpdateUser, onLogout, onShowT
           </div>
         </div>
       </div>
-
-      {/* ============ TICKET QR MODAL ============ */}
-      {ticketReg && (
-        <div className="modal" style={{ display: 'flex' }} role="dialog" aria-modal="true">
-          <div className="modal-overlay" onClick={() => setTicketReg(null)} />
-          <div className="modal-box">
-            <button type="button" className="modal-close" onClick={() => setTicketReg(null)} aria-label="Close ticket">
-              &times;
-            </button>
-            <div className="modal-header">
-              <span className="event-tag">Event Ticket</span>
-              <h2>{ticketReg.eventTitle}</h2>
-            </div>
-            <div className="modal-body">
-              <div className="ticket-qr">
-                <QRCodeSVG value={ticketReg.ticketCode} size={220} marginSize={2} />
-                <p style={{ margin: 0 }}>
-                  {user?.name || user?.fullName} · {user?.collegeId}
-                </p>
-                <p style={{ margin: 0 }}>📅 {ticketReg.eventDate} · 📍 {ticketReg.eventVenue}</p>
-                <p className="ticket-code">{ticketReg.ticketCode}</p>
-                <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-light)' }}>
-                  Show this QR code to the organizers at the venue to check in.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </main>
   );
 }
