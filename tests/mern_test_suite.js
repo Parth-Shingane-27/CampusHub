@@ -238,11 +238,8 @@ async function runTestSuite() {
   const indexHtml = path.join(clientDist, 'index.html');
   const assetsDir = path.join(clientDist, 'assets');
 
-  // The React build is optional: without client/dist the server serves the static frontend in public/
-  const publicDir = path.join(__dirname, '../public');
-  assert(fs.existsSync(path.join(publicDir, 'index.html')), 'Static frontend public/index.html exists');
   if (!fs.existsSync(clientDist)) {
-    console.log('  ℹ️  client/dist not built (run "npm run build" to serve the React client instead)');
+    console.log('  ℹ️  client/dist not built (run "npm run build" to build the React client)');
   } else {
     assert(fs.existsSync(indexHtml), 'Production client/dist/index.html generated');
   }

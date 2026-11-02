@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { TimeBadge, CalendarLinks } from './EventBadges';
 
 export default function EventModal({ event, isOpen, onClose, user, isRegistered, onRegister, registering }) {
   const navigate = useNavigate();
@@ -44,7 +45,11 @@ export default function EventModal({ event, isOpen, onClose, user, isRegistered,
               📌 Status: <strong style={{ color: event.status === 'Upcoming' ? '#10b981' : '#f59e0b' }}>{event.status || 'Upcoming'}</strong>
             </span>
           </div>
+          <div style={{ marginBottom: '12px' }}>
+            <TimeBadge event={event} />
+          </div>
           <p className="modal-desc">{event.description}</p>
+          {isRegistered && <CalendarLinks event={event} />}
         </div>
 
         <div className="modal-footer">

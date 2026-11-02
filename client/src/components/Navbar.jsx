@@ -36,8 +36,16 @@ export default function Navbar({ user, onLogout }) {
 
             {user && user.role === 'admin' && (
               <li>
-                <NavLink to="/admin" className={({ isActive }) => (isActive ? 'active' : '')}>
+                <NavLink to="/admin" end className={({ isActive }) => (isActive ? 'active' : '')}>
                   Admin Panel
+                </NavLink>
+              </li>
+            )}
+
+            {user && user.role === 'admin' && (
+              <li>
+                <NavLink to="/admin/checkin" className={({ isActive }) => (isActive ? 'active' : '')}>
+                  Check-In
                 </NavLink>
               </li>
             )}

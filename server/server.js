@@ -10,6 +10,7 @@ const session = require('express-session');
 const ConnectMongo = require('connect-mongo');
 const MongoStore = ConnectMongo.create ? ConnectMongo : (ConnectMongo.MongoStore || ConnectMongo.default);
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 const path = require('path');
 const fs = require('fs');
 
@@ -20,11 +21,11 @@ const authRoutes = require('./routes/authRoutes');
 const eventRoutes = require('./routes/eventRoutes');
 const registrationRoutes = require('./routes/registrationRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const bookmarkRoutes = require('./routes/bookmarkRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const CLIENT_DIST = path.join(__dirname, '../client/dist');
-const PUBLIC_DIR = path.join(__dirname, '../public');
 
 // 1. CORS: the frontend is served from this server (same origin). Cross-origin
 // access is limited to the Vite dev server plus any origins in CLIENT_ORIGIN.
@@ -40,6 +41,9 @@ app.use(
     credentials: true
   })
 );
+
+// Behind a proxy (Render, Heroku, ...) the real client IP is needed for rate limiting
+if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1);
 
 // 2. Parse JSON & Form Data Bodies
 app.use(express.json({ limit: '1mb' }));
@@ -81,6 +85,27 @@ if (process.env.MONGODB_URI) {
 
 app.use(session(sessionOptions));
 
+// Rate limiting: a general cap on the API, and a stricter one on login/registration
+const tooMany = { success: false, message: 'Too many requests. Please wait a few minutes and try again.' };
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 600,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: tooMany,
+  skip: req => req.path === '/health' || req.path === '/events/stream'
+});
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 30,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: tooMany,
+  skip: req => req.method !== 'POST' || req.path === '/logout'
+});
+app.use('/api', apiLimiter);
+app.use('/api/auth', authLimiter);
+
 // 4. API Endpoints Routing
 app.get('/api/health', (req, res) => {
   res.status(200).json({
@@ -108,6 +133,7 @@ app.use('/api/events', eventRoutes);
 app.use('/api/registrations', registrationRoutes);
 app.use('/api/student/registrations', registrationRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/bookmarks', bookmarkRoutes);
 
 // Backwards-compatibility aliases
 app.use('/api/student', registrationRoutes);
@@ -125,8 +151,9 @@ if (fs.existsSync(CLIENT_DIST)) {
     next();
   });
 } else {
-  // Development fallback: serve the static frontend from public/ if the React build does not exist
-  app.use(express.static(PUBLIC_DIR));
+  app.get('/', (req, res) => {
+    res.status(503).send('The CampusHub frontend has not been built. Run "npm run build" (or "npm run client" for the Vite dev server).');
+  });
 }
 
 // 6. 404 Handler for undefined API routes

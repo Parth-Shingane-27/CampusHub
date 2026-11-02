@@ -23,6 +23,31 @@ function getEventStart(event) {
   return new Date(y, m - 1, d, hours, minutes);
 }
 
+// End time: the second clock time in the text if present (e.g. "9:00 AM - 5:00 PM"),
+// otherwise start + 2 hours. Rolls over to the next day if it is earlier than the start.
+function getEventEnd(event) {
+  const start = getEventStart(event);
+  if (!start) return null;
+
+  const times = [...(event.time || '').matchAll(/(\d{1,2}):(\d{2})\s*(AM|PM)/gi)];
+  if (times.length >= 2) {
+    const [, h, min, ap] = times[1];
+    let hours = Number(h) % 12;
+    if (ap.toUpperCase() === 'PM') hours += 12;
+    const end = new Date(start.getFullYear(), start.getMonth(), start.getDate(), hours, Number(min));
+    if (end <= start) end.setDate(end.getDate() + 1);
+    return end;
+  }
+  return new Date(start.getTime() + 2 * 60 * 60 * 1000);
+}
+
+// Local date-time without a zone ("YYYY-MM-DDTHH:mm:ss"); clients parse it as their own local time
+function toLocalIso(d) {
+  if (!d) return null;
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
+}
+
 // True once the event's start time has passed (server local time)
 function hasEventStarted(event, now = new Date()) {
   const start = getEventStart(event);
@@ -35,4 +60,4 @@ function effectiveStatus(event, now = new Date()) {
   return event.status;
 }
 
-module.exports = { getEventStart, hasEventStarted, effectiveStatus };
+module.exports = { getEventStart, getEventEnd, toLocalIso, hasEventStarted, effectiveStatus };

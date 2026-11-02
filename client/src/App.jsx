@@ -13,6 +13,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import StudentDashboard from './pages/StudentDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import CheckIn from './pages/CheckIn';
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -106,6 +107,15 @@ export default function App() {
                   onLogout={handleLogout}
                   onShowToast={showToast}
                 />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/checkin"
+            element={
+              <ProtectedRoute user={user} loading={loading} requiredRole="admin">
+                <CheckIn onShowToast={showToast} />
               </ProtectedRoute>
             }
           />

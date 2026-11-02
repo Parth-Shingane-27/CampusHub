@@ -10,6 +10,10 @@ const Event = require('../models/Event');
 const Registration = require('../models/Registration');
 const User = require('../models/User');
 const { requireAdmin } = require('../middleware/authMiddleware');
+const { broadcast } = require('../utils/liveUpdates');
+const { validObjectId } = require('../middleware/validate');
+
+const CHECKIN_CODE = /^[a-f0-9]{24}$/;
 
 const router = express.Router();
 
@@ -79,7 +83,7 @@ router.get('/students', async (req, res) => {
 // --------------------------------------------------------
 // PUT /api/admin/students/:id — Edit a student's profile
 // --------------------------------------------------------
-router.put('/students/:id', async (req, res) => {
+router.put('/students/:id', validObjectId(), async (req, res) => {
   try {
     const student = await User.findOne({ _id: req.params.id, role: 'student' });
     if (!student) {
@@ -114,7 +118,7 @@ router.put('/students/:id', async (req, res) => {
 // --------------------------------------------------------
 // DELETE /api/admin/students/:id — Remove a student and their registrations
 // --------------------------------------------------------
-router.delete('/students/:id', async (req, res) => {
+router.delete('/students/:id', validObjectId(), async (req, res) => {
   try {
     const student = await User.findOne({ _id: req.params.id, role: 'student' });
     if (!student) {
@@ -198,7 +202,7 @@ router.get('/registrations', async (req, res) => {
 // --------------------------------------------------------
 // 3. DELETE /api/admin/registrations/:id — Remove a registration
 // --------------------------------------------------------
-router.delete('/registrations/:id', async (req, res) => {
+router.delete('/registrations/:id', validObjectId(), async (req, res) => {
   try {
     const reg = await Registration.findById(req.params.id)
       .populate('student', 'name')
@@ -213,6 +217,7 @@ router.delete('/registrations/:id', async (req, res) => {
 
     const studentName = reg.student ? reg.student.name : 'Student';
     await Registration.findByIdAndDelete(req.params.id);
+    broadcast();
 
     return res.status(200).json({
       success: true,
@@ -229,6 +234,63 @@ router.delete('/registrations/:id', async (req, res) => {
 });
 
 // --------------------------------------------------------
+// POST /api/admin/checkin — Mark a ticket as attended (QR scan)
+// --------------------------------------------------------
+router.post('/checkin', async (req, res) => {
+  try {
+    const code = String((req.body && req.body.code) || '').trim().toLowerCase();
+    if (!CHECKIN_CODE.test(code)) {
+      return res.status(400).json({ success: false, message: 'This is not a valid CampusHub ticket code.' });
+    }
+
+    const reg = await Registration.findOne({ ticketCode: code })
+      .populate('student', 'name collegeId email')
+      .populate('event', 'title');
+
+    if (!reg || !reg.event) {
+      return res.status(404).json({ success: false, message: 'Ticket not found.' });
+    }
+
+    const info = {
+      studentName: reg.student ? reg.student.name : 'Student',
+      collegeId: reg.student ? reg.student.collegeId : '',
+      eventTitle: reg.event.title
+    };
+
+    if (reg.status !== 'Confirmed') {
+      return res.status(400).json({ success: false, message: 'This registration was cancelled.', ...info });
+    }
+
+    // Atomic update so two scanners cannot both succeed for the same ticket
+    const updated = await Registration.findOneAndUpdate(
+      { _id: reg._id, checkedInAt: { $exists: false } },
+      { checkedInAt: new Date() },
+      { returnDocument: 'after' }
+    );
+
+    if (!updated) {
+      return res.status(409).json({
+        success: false,
+        message: 'Already checked in.',
+        checkedInAt: reg.checkedInAt,
+        ...info
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `${info.studentName} checked in for "${info.eventTitle}".`,
+      ...info,
+      checkedInAt: updated.checkedInAt
+    });
+
+  } catch (error) {
+    console.error('Error during check-in:', error);
+    return res.status(500).json({ success: false, message: 'Server error during check-in.' });
+  }
+});
+
+// --------------------------------------------------------
 // 4. POST /api/admin/events — Create a new event
 // --------------------------------------------------------
 router.post('/events', async (req, res) => {
@@ -241,8 +303,8 @@ router.post('/events', async (req, res) => {
     if (!category) {
       return res.status(400).json({ success: false, message: 'Please select an event category.' });
     }
-    if (!date) {
-      return res.status(400).json({ success: false, message: 'Please specify an event date.' });
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(String(date).trim())) {
+      return res.status(400).json({ success: false, message: 'Please specify the event date as YYYY-MM-DD.' });
     }
     if (!venue || venue.trim().length < 2) {
       return res.status(400).json({ success: false, message: 'Please provide an event venue.' });
@@ -265,6 +327,8 @@ router.post('/events', async (req, res) => {
       image: image && image.trim() ? image.trim() : 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=500&q=80'
     });
 
+    broadcast();
+
     return res.status(201).json({
       success: true,
       message: 'New event created successfully!',
@@ -284,6 +348,9 @@ router.post('/events', async (req, res) => {
     });
 
   } catch (error) {
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ success: false, message: Object.values(error.errors).map(e => e.message).join(' ') });
+    }
     console.error('Error creating event:', error);
     return res.status(500).json({
       success: false,
@@ -295,7 +362,7 @@ router.post('/events', async (req, res) => {
 // --------------------------------------------------------
 // 5. PUT /api/admin/events/:id — Edit an existing event
 // --------------------------------------------------------
-router.put('/events/:id', async (req, res) => {
+router.put('/events/:id', validObjectId(), async (req, res) => {
   try {
     const { title, category, date, time, venue, description, capacity, image, status } = req.body;
 
@@ -321,6 +388,7 @@ router.put('/events/:id', async (req, res) => {
     }
 
     await event.save();
+    broadcast();
 
     return res.status(200).json({
       success: true,
@@ -340,6 +408,9 @@ router.put('/events/:id', async (req, res) => {
     });
 
   } catch (error) {
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ success: false, message: Object.values(error.errors).map(e => e.message).join(' ') });
+    }
     console.error('Error updating event:', error);
     return res.status(500).json({
       success: false,
@@ -351,7 +422,7 @@ router.put('/events/:id', async (req, res) => {
 // --------------------------------------------------------
 // 6. DELETE /api/admin/events/:id — Delete an event
 // --------------------------------------------------------
-router.delete('/events/:id', async (req, res) => {
+router.delete('/events/:id', validObjectId(), async (req, res) => {
   try {
     const event = await Event.findById(req.params.id);
     if (!event) {
@@ -362,6 +433,7 @@ router.delete('/events/:id', async (req, res) => {
 
     // Update linked registrations to Cancelled
     await Registration.updateMany({ event: req.params.id }, { status: 'Cancelled', cancelledAt: new Date() });
+    broadcast();
 
     return res.status(200).json({
       success: true,

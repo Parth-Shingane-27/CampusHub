@@ -41,7 +41,8 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: ['student', 'admin'],
       default: 'student'
-    }
+    },
+    bookmarks: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Event' }]
   },
   {
     timestamps: true

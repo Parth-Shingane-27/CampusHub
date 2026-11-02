@@ -12,6 +12,12 @@ CampusHub is a web application that helps college students explore campus events
 - **Student Dashboard** – View registrations, cancel bookings and edit the profile.
 - **Admin Dashboard** – Create, edit and delete events; view event-wise registrations; view, edit and delete students.
 - **Role-based Access** – Separate student and admin permissions enforced on the server.
+- **Add to Calendar** – Google Calendar link or `.ics` download on every event and after registering.
+- **Live Status Badges** – "Starts in 2 days", "Closing soon", "Ongoing" or "Completed" on each event.
+- **Bookmarks** – Students can save events and see them on their dashboard.
+- **QR Tickets & Check-In** – Every registration gets a QR ticket; admins scan it (camera or manual code) at the venue to mark attendance.
+- **Live Seat Counts** – Seat availability updates in real time (Server-Sent Events) without refreshing.
+- **Pagination, Rate Limiting & Validation** – Events are paginated; the API is rate limited and validates input.
 - **Responsive Design** – Works on different screen sizes.
 
 ## 🛠️ Technologies Used
@@ -31,11 +37,6 @@ CampusHub is a web application that helps college students explore campus events
 
 ```text
 CampusHub/
-├── public/                 # Static frontend served by the Express server
-│   ├── *.html              # index, events, about, login, student/admin dashboards
-│   ├── css/                # Stylesheet
-│   ├── js/                 # Page scripts
-│   └── images/
 ├── server/                 # Node.js and Express backend
 │   ├── config/             # Database connection and seeding
 │   ├── models/             # Mongoose models (User, Event, Registration)
@@ -43,7 +44,7 @@ CampusHub/
 │   ├── middleware/         # Authentication / role checks
 │   ├── utils/              # Helpers (event timing)
 │   └── server.js
-├── client/                 # Optional React (Vite) frontend; served instead of public/ once built
+├── client/                 # React (Vite) frontend; built to client/dist and served by Express
 ├── tests/                  # Automated tests (npm test)
 ├── .env.example            # Environment variable template
 └── package.json
@@ -114,7 +115,9 @@ For Google Sign-In, create an OAuth client ID (type "Web application") in Google
 ### 5. Start the Application
 
 ```bash
+npm run build    # build the React frontend (needed once, and after frontend changes)
 npm start        # http://localhost:3000 (frontend + API)
+npm run client   # optional: Vite dev server on http://localhost:5173 with hot reload
 npm test         # run the test suite
 ```
 

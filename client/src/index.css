@@ -1601,3 +1601,64 @@ section {
     opacity: 1;
   }
 }
+
+/* ---------- Time-status badges, calendar links, bookmarks, tickets ---------- */
+.badge-time {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
+  background: #e0e7ff;
+  color: #3730a3;
+}
+.badge-time.soon { background: #fef3c7; color: #92400e; }
+.badge-time.ongoing { background: #d1fae5; color: #065f46; }
+.badge-time.done { background: #e5e7eb; color: #4b5563; }
+
+.cal-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.cal-link {
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--primary, #4f46e5);
+  background: none;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  text-decoration: none;
+}
+.cal-link:hover { background: #f3f4f6; }
+
+.event-card-img { position: relative; }
+.bookmark-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  color: #6b7280;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+.bookmark-btn:hover,
+.bookmark-btn.saved { color: #f59e0b; }
+
+.pager { display: flex; justify-content: center; align-items: center; gap: 14px; margin: 32px 0; }
+.pager span { font-size: 0.9rem; color: var(--text-light); }
+
+.ticket-qr { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 8px 0; }
+.ticket-qr .ticket-code { font-family: monospace; font-size: 0.8rem; color: var(--text-light); word-break: break-all; text-align: center; }
+
+.scan-result { margin-top: 16px; padding: 14px 16px; border-radius: 8px; font-weight: 600; }
+.scan-result.ok { background: #d1fae5; color: #065f46; }
+.scan-result.warn { background: #fef3c7; color: #92400e; }
+.scan-result.bad { background: #fee2e2; color: #991b1b; }

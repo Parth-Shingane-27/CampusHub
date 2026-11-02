@@ -8,7 +8,11 @@ const express = require('express');
 const Registration = require('../models/Registration');
 const Event = require('../models/Event');
 const { requireStudent } = require('../middleware/authMiddleware');
-const { hasEventStarted } = require('../utils/eventTime');
+const { hasEventStarted, getEventStart, getEventEnd, toLocalIso } = require('../utils/eventTime');
+const { broadcast } = require('../utils/liveUpdates');
+const { validObjectId } = require('../middleware/validate');
+const mongoose = require('mongoose');
+const crypto = require('crypto');
 
 const router = express.Router();
 
@@ -19,10 +23,10 @@ router.post('/', requireStudent, async (req, res) => {
   try {
     const { eventId } = req.body;
 
-    if (!eventId) {
+    if (!eventId || !mongoose.isValidObjectId(eventId)) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide an event ID to register.'
+        message: 'Please provide a valid event ID to register.'
       });
     }
 
@@ -85,6 +89,8 @@ router.post('/', requireStudent, async (req, res) => {
       status: 'Confirmed'
     });
 
+    broadcast();
+
     return res.status(201).json({
       success: true,
       message: `Successfully registered for "${event.title}"!`,
@@ -93,6 +99,7 @@ router.post('/', requireStudent, async (req, res) => {
         eventId: event._id.toString(),
         eventTitle: event.title,
         status: newReg.status,
+        ticketCode: newReg.ticketCode,
         registeredAt: newReg.registeredAt
       }
     });
@@ -117,6 +124,14 @@ async function getMyRegistrationsHandler(req, res) {
       .populate('event')
       .sort({ createdAt: -1 });
 
+    // Registrations made before tickets existed get a code the first time they are listed
+    for (const r of registrations) {
+      if (r.status === 'Confirmed' && !r.ticketCode) {
+        r.ticketCode = crypto.randomBytes(12).toString('hex');
+        await r.save();
+      }
+    }
+
     const formatted = registrations.map(r => ({
       id: r._id.toString(),
       _id: r._id.toString(),
@@ -125,7 +140,13 @@ async function getMyRegistrationsHandler(req, res) {
       eventCategory: r.event ? r.event.category : 'General',
       eventDate: r.event ? r.event.date : 'N/A',
       eventVenue: r.event ? r.event.venue : 'Campus',
+      eventTime: r.event ? r.event.time : '',
+      eventDescription: r.event ? r.event.description : '',
+      eventStartsAt: r.event ? toLocalIso(getEventStart(r.event)) : null,
+      eventEndsAt: r.event ? toLocalIso(getEventEnd(r.event)) : null,
       status: r.status,
+      ticketCode: r.status === 'Confirmed' ? r.ticketCode : null,
+      checkedInAt: r.checkedInAt || null,
       registeredAt: r.registeredAt,
       createdAt: r.createdAt
     }));
@@ -182,6 +203,7 @@ async function cancelRegistrationHandler(req, res) {
     reg.status = 'Cancelled';
     reg.cancelledAt = new Date();
     await reg.save();
+    broadcast();
 
     const title = reg.event ? reg.event.title : 'Event';
 
@@ -199,8 +221,8 @@ async function cancelRegistrationHandler(req, res) {
   }
 }
 
-router.post('/:id/cancel', requireStudent, cancelRegistrationHandler);
-router.patch('/:id/cancel', requireStudent, cancelRegistrationHandler);
+router.post('/:id/cancel', requireStudent, validObjectId(), cancelRegistrationHandler);
+router.patch('/:id/cancel', requireStudent, validObjectId(), cancelRegistrationHandler);
 
 // --------------------------------------------------------
 // 4. GET /api/student/stats — Metric counts for Student Dashboard
