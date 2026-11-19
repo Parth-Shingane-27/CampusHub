@@ -10,7 +10,6 @@ import Home from './pages/Home';
 import Events from './pages/Events';
 import About from './pages/About';
 import Login from './pages/Login';
-import Register from './pages/Register';
 import StudentDashboard from './pages/StudentDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 
@@ -78,7 +77,7 @@ export default function App() {
           />
           <Route
             path="/register"
-            element={<Register onLoginSuccess={handleLoginSuccess} onShowToast={showToast} />}
+            element={<Navigate to="/login" replace />}
           />
 
           {/* Protected Student Portal */}

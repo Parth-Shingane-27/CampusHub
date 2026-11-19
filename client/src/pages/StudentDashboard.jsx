@@ -22,6 +22,7 @@ export default function StudentDashboard({ user, onUpdateUser, onLogout, onShowT
   const [stats, setStats] = useState({ totalEvents: 0, myRegistrationsCount: 0 });
   const [loading, setLoading] = useState(true);
   const [savedEvents, setSavedEvents] = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
   const [, setTick] = useState(0);
 
   useMinuteTick(setTick);
@@ -45,6 +46,21 @@ export default function StudentDashboard({ user, onUpdateUser, onLogout, onShowT
       ]);
 
       setSavedEvents(bookmarkData.events || []);
+
+      // Suggest upcoming events the student has not registered for yet
+      try {
+        const evData = await api.getEvents();
+        const taken = new Set((regsData.registrations || []).filter((r) => r.status === 'Confirmed').map((r) => String(r.eventId)));
+        setSuggestions(
+          (evData.events || [])
+            .filter((e) => e.status !== 'Completed' && !taken.has(String(e.id || e._id)))
+            .slice(0, 3)
+            .map((e) => ({ ...e, id: e.id || e._id }))
+        );
+      } catch (e) {
+        setSuggestions([]);
+      }
+
       setRegistrations(regsData.registrations || []);
       if (statsData && statsData.stats) {
         setStats(statsData.stats);
@@ -276,6 +292,79 @@ export default function StudentDashboard({ user, onUpdateUser, onLogout, onShowT
                 </div>
               )}
             </div>
+
+            {/* Saved Events Card */}
+            <div className="dashboard-card">
+              <div className="dashboard-card-header">
+                <h3>Saved Events</h3>
+                <span className="badge-seats">{savedEvents.length}</span>
+              </div>
+              {savedEvents.length === 0 ? (
+                <p style={{ fontSize: '0.9rem', color: 'var(--text-light)' }}>
+                  Tap the ☆ on any event to save it here for later.
+                </p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {savedEvents.map((evt) => (
+                    <div key={evt.id} style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
+                        <strong style={{ color: 'var(--dark)' }}>{evt.title}</strong>
+                        <button
+                          type="button"
+                          className="bookmark-btn saved"
+                          style={{ position: 'static', width: '28px', height: '28px', boxShadow: 'none', flexShrink: 0 }}
+                          aria-label={`Remove ${evt.title} from saved events`}
+                          title="Remove bookmark"
+                          onClick={() => handleRemoveSaved(evt.id)}
+                        >
+                          ★
+                        </button>
+                      </div>
+                      <div style={{ margin: '6px 0', fontSize: '0.82rem', color: 'var(--text-light)' }}>
+                        📅 {evt.date} · 📍 {evt.venue}
+                      </div>
+                      <TimeBadge event={evt} />
+                      <CalendarLinks event={evt} />
+                    </div>
+                  ))}
+                  <Link to="/events" className="btn btn-secondary btn-small btn-block" style={{ textAlign: 'center' }}>
+                    Browse more events
+                  </Link>
+                </div>
+              )}
+            </div>
+
+            {/* Upcoming Events Card (fills the left column) */}
+            <div className="dashboard-card">
+              <div className="dashboard-card-header">
+                <h3>Upcoming Events For You</h3>
+                <Link to="/events" className="btn-action btn-action-edit">View all</Link>
+              </div>
+              {suggestions.length === 0 ? (
+                <p style={{ fontSize: '0.9rem', color: 'var(--text-light)' }}>
+                  No new upcoming events right now. Check back soon!
+                </p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {suggestions.map((evt) => (
+                    <div
+                      key={evt.id}
+                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}
+                    >
+                      <div>
+                        <strong style={{ color: 'var(--dark)' }}>{evt.title}</strong>
+                        <div style={{ margin: '4px 0', fontSize: '0.82rem', color: 'var(--text-light)' }}>
+                          📅 {evt.date} · 📍 {evt.venue}
+                        </div>
+                        <TimeBadge event={evt} />
+                      </div>
+                      <Link to="/events" className="btn btn-primary btn-small">Register</Link>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
           </div>
 
           {/* Right Column: Profile & Assistance */}
@@ -380,47 +469,6 @@ export default function StudentDashboard({ user, onUpdateUser, onLogout, onShowT
                     </p>
                   )}
                 </form>
-              )}
-            </div>
-
-            {/* Saved Events Card */}
-            <div className="dashboard-card">
-              <div className="dashboard-card-header">
-                <h3>Saved Events</h3>
-                <span className="badge-seats">{savedEvents.length}</span>
-              </div>
-              {savedEvents.length === 0 ? (
-                <p style={{ fontSize: '0.9rem', color: 'var(--text-light)' }}>
-                  Tap the ☆ on any event to save it here for later.
-                </p>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {savedEvents.map((evt) => (
-                    <div key={evt.id} style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
-                        <strong style={{ color: 'var(--dark)' }}>{evt.title}</strong>
-                        <button
-                          type="button"
-                          className="bookmark-btn saved"
-                          style={{ position: 'static', width: '28px', height: '28px', boxShadow: 'none', flexShrink: 0 }}
-                          aria-label={`Remove ${evt.title} from saved events`}
-                          title="Remove bookmark"
-                          onClick={() => handleRemoveSaved(evt.id)}
-                        >
-                          ★
-                        </button>
-                      </div>
-                      <div style={{ margin: '6px 0', fontSize: '0.82rem', color: 'var(--text-light)' }}>
-                        📅 {evt.date} · 📍 {evt.venue}
-                      </div>
-                      <TimeBadge event={evt} />
-                      <CalendarLinks event={evt} />
-                    </div>
-                  ))}
-                  <Link to="/events" className="btn btn-secondary btn-small btn-block" style={{ textAlign: 'center' }}>
-                    Browse more events
-                  </Link>
-                </div>
               )}
             </div>
 

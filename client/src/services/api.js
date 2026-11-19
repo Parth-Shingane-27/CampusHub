@@ -48,6 +48,8 @@ export const api = {
   // Auth
   getMe: () => request('/auth/me'),
   login: (email, password) => request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
+  getAuthConfig: () => request('/auth/config'),
+  googleLogin: (credential) => request('/auth/google', { method: 'POST', body: JSON.stringify({ credential }) }),
   register: (userData) => request('/auth/register', { method: 'POST', body: JSON.stringify(userData) }),
   logout: () => request('/auth/logout', { method: 'POST' }),
   updateProfile: (profileData) => request('/auth/profile', { method: 'PUT', body: JSON.stringify(profileData) }),
