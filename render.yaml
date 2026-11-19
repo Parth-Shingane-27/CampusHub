@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: campushub
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 22
+      - key: ALLOWED_EMAIL_DOMAIN
+        value: mitaoe.ac.in
+      - key: ADMIN_NAME
+        value: Campus Administrator
+      - key: ADMIN_EMAIL
+        value: admin@mitaoe.ac.in
+      - key: SESSION_SECRET
+        generateValue: true
+      # Secrets: Render will ask for these values on first deploy
+      - key: MONGODB_URI
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
