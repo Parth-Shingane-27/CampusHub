@@ -1,6 +1,6 @@
 // ========================================================
 // CampusHub - Event helpers
-// Time-status badges, "Add to Calendar" links (Google / .ics)
+// Time-status badges, "Add to Calendar" links (Google Calendar)
 // and a hook for live updates. Events carry startsAt / endsAt as
 // local "YYYY-MM-DDTHH:mm:ss" strings.
 // ========================================================
@@ -16,15 +16,6 @@ const pad = (n) => String(n).padStart(2, '0');
 // "20261105T090000": floating local time, so calendar apps use the viewer's time zone
 const calStamp = (d) =>
   `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`;
-
-const utcStamp = (d) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
-
-const icsText = (s) =>
-  String(s || '')
-    .replace(/\\/g, '\\\\')
-    .replace(/\r?\n/g, '\\n')
-    .replace(/,/g, '\\,')
-    .replace(/;/g, '\\;');
 
 function getRange(event) {
   if (!event || !event.startsAt) return null;
@@ -69,36 +60,6 @@ export function googleCalendarUrl(event) {
     location: event.venue || ''
   });
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
-}
-
-export function downloadIcs(event) {
-  const range = getRange(event);
-  if (!range) return;
-  const lines = [
-    'BEGIN:VCALENDAR',
-    'VERSION:2.0',
-    'PRODID:-//CampusHub//Events//EN',
-    'CALSCALE:GREGORIAN',
-    'BEGIN:VEVENT',
-    `UID:${event.id || event._id}@campushub`,
-    `DTSTAMP:${utcStamp(new Date())}`,
-    `DTSTART:${calStamp(range.start)}`,
-    `DTEND:${calStamp(range.end)}`,
-    `SUMMARY:${icsText(event.title)}`,
-    `DESCRIPTION:${icsText(event.description)}`,
-    `LOCATION:${icsText(event.venue)}`,
-    'END:VEVENT',
-    'END:VCALENDAR'
-  ];
-  const blob = new Blob([lines.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${(event.title || 'event').replace(/[^\w-]+/g, '_')}.ics`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 // Calls onChange (debounced) whenever the server reports that events or seats changed

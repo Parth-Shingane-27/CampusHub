@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import EventModal from '../components/EventModal';
 import { TimeBadge, CalendarLinks, BookmarkButton } from '../components/EventBadges';
@@ -9,6 +9,7 @@ const PAGE_SIZE = 9;
 
 export default function Events({ user, onShowToast }) {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const initialCategory = searchParams.get('category') || 'All';
 
   const [events, setEvents] = useState([]);
@@ -250,11 +251,20 @@ export default function Events({ user, onShowToast }) {
                         >
                           View Details
                         </button>
-                        {isRegistered && (
+                        {isRegistered ? (
                           <span className="badge-status confirmed" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 12px', whiteSpace: 'nowrap' }}>
                             ✓ Registered
                           </span>
-                        )}
+                        ) : !isClosed && !isFull && (!user || isStudent) ? (
+                          <button
+                            type="button"
+                            className="btn btn-primary btn-small btn-block"
+                            disabled={registering}
+                            onClick={() => (user ? handleRegister(eventId) : navigate('/login?redirect=/events'))}
+                          >
+                            {user ? (registering ? 'Registering...' : 'Register Now') : 'Login to Register'}
+                          </button>
+                        ) : null}
                       </div>
                       <CalendarLinks event={event} />
                     </div>

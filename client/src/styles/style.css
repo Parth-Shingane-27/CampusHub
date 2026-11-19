@@ -1601,3 +1601,9 @@ section {
     opacity: 1;
   }
 }
+
+/* Uploaded logo-style banners (e.g. SIH): show the whole image instead of cropping it */
+.event-card-img img[src^="/images/"] {
+  object-fit: contain;
+  background: #fff;
+}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { getTimeBadge, googleCalendarUrl, downloadIcs } from '../utils/eventUtils';
+import { getTimeBadge, googleCalendarUrl } from '../utils/eventUtils';
 
 // "Starts in 2 days" / "Closing soon" / "Ongoing" / "Completed"
 export function TimeBadge({ event }) {
@@ -8,7 +8,7 @@ export function TimeBadge({ event }) {
   return <span className={`badge-time ${badge.cls}`}>{badge.label}</span>;
 }
 
-// Google Calendar link and .ics download; hidden once the event is over
+// Google Calendar link; hidden once the event is over
 export function CalendarLinks({ event }) {
   const url = googleCalendarUrl(event);
   const badge = getTimeBadge(event);
@@ -19,9 +19,6 @@ export function CalendarLinks({ event }) {
       <a className="cal-link" href={url} target="_blank" rel="noopener noreferrer">
         📅 Google Calendar
       </a>
-      <button type="button" className="cal-link" onClick={() => downloadIcs(event)}>
-        ⬇ .ics
-      </button>
     </div>
   );
 }
