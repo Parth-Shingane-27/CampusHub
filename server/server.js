@@ -5,6 +5,12 @@
 // ========================================================
 
 require('dotenv').config();
+
+// mongodb+srv:// needs SRV DNS lookups, which some networks' resolvers refuse
+// (querySrv ECONNREFUSED). Use public DNS for those URIs (set USE_SYSTEM_DNS=true to opt out).
+if ((process.env.MONGODB_URI || '').startsWith('mongodb+srv://') && process.env.USE_SYSTEM_DNS !== 'true') {
+  require('dns').setServers(['8.8.8.8', '1.1.1.1']);
+}
 const express = require('express');
 const session = require('express-session');
 const ConnectMongo = require('connect-mongo');
